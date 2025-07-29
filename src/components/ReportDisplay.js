@@ -371,14 +371,31 @@ const ReportDisplay = ({ report, onBack }) => {
                         {weakness.description}
                       </p>
                       
-                      {weakness.example && (
-                        <div className="mt-2 p-3 bg-white border-l-4 border-red-400 rounded">
-                          <div 
-                            className="text-sm text-gray-700"
-                            dangerouslySetInnerHTML={{
-                              __html: weakness.example
-                            }}
-                          />
+                      {(weakness.example || weakness.betterPlan) && (
+                        <div className="mt-4 bg-white p-4 rounded-lg border border-gray-300 shadow-sm">
+                          <h4 className="font-semibold text-gray-700 mb-3 flex items-center">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                            Example & Improvement
+                          </h4>
+                          
+                          {weakness.example && (
+                            <div className="mb-3">
+                              <div 
+                                className="text-sm text-gray-700"
+                                dangerouslySetInnerHTML={{
+                                  __html: weakness.example
+                                }}
+                              />
+                            </div>
+                          )}
+                          
+                          {weakness.betterPlan && !weakness.example.includes('Better Plan:') && (
+                            <div className="mt-3 p-3 bg-green-50 border-l-4 border-green-400 rounded">
+                              <p className="text-sm text-gray-700">
+                                <strong className="text-green-700">Better Plan:</strong> {weakness.betterPlan}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
