@@ -188,7 +188,7 @@ class SimpleAnalysisService {
       return analysis;
     } catch (error) {
       console.error(`❌ [GEMINI FEN] Analysis failed:`, error);
-      throw new Error(`Gemini FEN analysis failed: ${error.message}`);
+      throw new Error('Analysis failed. Please try again later.');
     }
   }
 

@@ -126,7 +126,7 @@ const ReportGenerator = ({ onReportGenerated }) => {
 
     } catch (error) {
       console.error('Report generation failed:', error);
-      setError(error.message || 'Failed to generate report. Please try again.');
+      setError('Analysis failed. Please try again later.');
     } finally {
       setIsGenerating(false);
       setProgress(null);
