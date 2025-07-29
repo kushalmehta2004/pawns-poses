@@ -363,25 +363,15 @@ const ReportDisplay = ({ report, onBack }) => {
               return (
                 <div>
                   {weaknesses.map((weakness, index) => (
-                    <div key={index} className="mb-6">
-                      {/* Weakness Title */}
-                      <h3 className="font-bold text-gray-800 text-lg mb-4">
+                    <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                      <h3 className="font-bold text-gray-800">
                         {weakness.number}. {weakness.title}
                       </h3>
-                      
-                      {/* Description Box */}
-                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                        <p className="text-sm text-gray-700">
-                      {weakness.description}
-                        </p>
-                          </div>
-                      
-                      {/* Example Box */}
+                      <p className="text-sm text-gray-600 mt-1">
+                        {weakness.description}
+                      </p>
                       {weakness.example && (
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <h4 className="font-semibold text-blue-800 mb-3">
-                            Example from Your Game
-                          </h4>
+                        <div className="mt-2 p-3 bg-white border-l-4 border-red-400 rounded">
                           <div 
                             className="text-sm text-gray-700"
                             dangerouslySetInnerHTML={{
