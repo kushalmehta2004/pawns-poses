@@ -189,8 +189,26 @@ const ReportDisplay = ({ report, onBack }) => {
                 
                 const weaknesses = [];
                 
-                // Split by the new format: **2.1.**, **2.2.**, **2.3.**
-                const blocks = section.split(/(?=\*\*2\.\d+\.\s+[^*]+:\*\*)/i).filter(block => block.trim().length > 50);
+                // Try multiple splitting patterns to handle different AI formats
+                let blocks = [];
+                
+                // Pattern 1: **2.1 Title:**, **2.2 Title:**, **2.3 Title:**
+                blocks = section.split(/(?=\*\*2\.\d+\s+Title:\s*[^*]+)/i).filter(block => block.trim().length > 50);
+                
+                // Pattern 2: **2.1.**, **2.2.**, **2.3.** (with dots)
+                if (blocks.length <= 1) {
+                  blocks = section.split(/(?=\*\*2\.\d+\.\s+[^*]+:\*\*)/i).filter(block => block.trim().length > 50);
+                }
+                
+                // Pattern 3: **1a.**, **2a.**, **3a.** (old format)
+                if (blocks.length <= 1) {
+                  blocks = section.split(/(?=\*\*[123]a\.\s*\*\*(?:Title|Weakness))/i).filter(block => block.trim().length > 50);
+                }
+                
+                // Pattern 4: **a.** repeated (fallback)
+                if (blocks.length <= 1) {
+                  blocks = section.split(/(?=\*\*a\.\s*\*\*(?:Title|Weakness))/i).filter(block => block.trim().length > 50);
+                }
                 
                 blocks.forEach((block, index) => {
                   const trimmed = block.trim();
@@ -198,28 +216,36 @@ const ReportDisplay = ({ report, onBack }) => {
                   
                   console.log(`Processing weakness block ${index + 1}:`, trimmed.substring(0, 200));
                   
-                  // Extract main title from **2.1. Title:** pattern
-                  const mainTitleMatch = trimmed.match(/\*\*2\.\d+\.\s+([^*]+):\*\*/i);
-                  let mainTitle = mainTitleMatch ? mainTitleMatch[1].trim() : `Weakness ${index + 1}`;
+                  // Flexible title extraction - try multiple patterns
+                  let title = `Weakness ${index + 1}`;
+                  let description = '';
+                  let exampleText = '';
+                  let betterPlan = '';
                   
-                  // Extract subtitle from **a. Title:** pattern
-                  const subtitleMatch = trimmed.match(/\*\*a\.\s*Title:\*\*\s*([^*]*?)(?=\*\*b\.|$)/i);
-                  const subtitle = subtitleMatch ? subtitleMatch[1].trim() : '';
-                  
-                  // Use subtitle as the main title if it exists, otherwise use main title
-                  const title = subtitle || mainTitle;
-                  
-                  // Extract explanation from **b. Explanation:**
-                  const explanationMatch = trimmed.match(/\*\*b\.\s*Explanation:\*\*\s*([^*]*?)(?=\*\*c\.|$)/i);
-                  const description = explanationMatch ? explanationMatch[1].trim() : '';
-                  
-                  // Extract example from **c. Example:**
-                  const exampleMatch = trimmed.match(/\*\*c\.\s*Example:\*\*\s*([^*]*?)(?=\*\*d\.|$)/i);
-                  const exampleText = exampleMatch ? exampleMatch[1].trim() : '';
-                  
-                  // Extract better plan from **d. Better Plan:**
-                  const betterPlanMatch = trimmed.match(/\*\*d\.\s*Better Plan:\*\*\s*([^*]*?)(?=$)/i);
-                  const betterPlan = betterPlanMatch ? betterPlanMatch[1].trim() : '';
+                  // Pattern 1: **2.1 Title:** format
+                  let titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
+                  if (titleMatch) {
+                    title = titleMatch[1].trim();
+                    const explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\s*([^*]*?)(?=\*\*2\.\d+\s+Example:|$)/i);
+                    description = explanationMatch ? explanationMatch[1].trim() : '';
+                    const exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\s*([^*]*?)(?=\*\*2\.\d+\s+Better Plan:|$)/i);
+                    exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+                    const betterPlanMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\s*([^*]*?)(?=\*\*2\.\d+\s+Title:|$)/i);
+                    betterPlan = betterPlanMatch ? betterPlanMatch[1].trim() : '';
+                  }
+                  // Pattern 2: **2.1.** format with **a. Title:**
+                  else {
+                    const mainTitleMatch = trimmed.match(/\*\*2\.\d+\.\s+([^*]+):\*\*/i);
+                    const subtitleMatch = trimmed.match(/\*\*a\.\s*Title:\*\*\s*([^*]*?)(?=\*\*b\.|$)/i);
+                    title = subtitleMatch ? subtitleMatch[1].trim() : (mainTitleMatch ? mainTitleMatch[1].trim() : title);
+                    
+                    const explanationMatch = trimmed.match(/\*\*b\.\s*Explanation:\*\*\s*([^*]*?)(?=\*\*c\.|$)/i);
+                    description = explanationMatch ? explanationMatch[1].trim() : '';
+                    const exampleMatch = trimmed.match(/\*\*c\.\s*Example:\*\*\s*([^*]*?)(?=\*\*d\.|$)/i);
+                    exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+                    const betterPlanMatch = trimmed.match(/\*\*d\.\s*Better Plan:\*\*\s*([^*]*?)(?=$)/i);
+                    betterPlan = betterPlanMatch ? betterPlanMatch[1].trim() : '';
+                  }
                   
                   // Parse the example for game details
                   let formattedExample = '';

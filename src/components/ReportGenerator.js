@@ -388,8 +388,8 @@ const ReportGenerator = ({ onReportGenerated }) => {
     
     console.log('🔍 [EXTRACT WEAKNESSES] Found weakness section:', weaknessSection.substring(0, 500));
     
-    // Split by the new format: **2.1.**, **2.2.**, **2.3.**
-    const weaknessBlocks = weaknessSection.split(/(?=\*\*2\.\d+\.\s+[^*]+:\*\*)/i).filter(block => block.trim().length > 20);
+    // Split by the new format: **2.1 Title:**, **2.2 Title:**, **2.3 Title:**
+    const weaknessBlocks = weaknessSection.split(/(?=\*\*2\.\d+\s+Title:\s*[^*]+)/i).filter(block => block.trim().length > 20);
     
     console.log('🔍 [EXTRACT WEAKNESSES] Found weakness blocks:', weaknessBlocks.length);
     
@@ -399,27 +399,20 @@ const ReportGenerator = ({ onReportGenerated }) => {
       
       console.log(`🔍 [EXTRACT WEAKNESSES] Processing block ${index + 1}:`, trimmed.substring(0, 200));
       
-      // Extract main title from **2.1. Title:** pattern
-      const mainTitleMatch = trimmed.match(/\*\*2\.\d+\.\s+([^*]+):\*\*/i);
-      let mainTitle = mainTitleMatch ? mainTitleMatch[1].trim() : `Weakness ${index + 1}`;
+      // Extract title from **2.1 Title:** pattern
+      const titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
+      const title = titleMatch ? titleMatch[1].trim() : `Weakness ${index + 1}`;
       
-      // Extract subtitle from **a. Title:** pattern
-      const subtitleMatch = trimmed.match(/\*\*a\.\s*Title:\*\*\s*([^*]*?)(?=\*\*b\.|$)/i);
-      const subtitle = subtitleMatch ? subtitleMatch[1].trim() : '';
-      
-      // Use subtitle as the main title if it exists, otherwise use main title
-      const title = subtitle || mainTitle;
-      
-      // Extract explanation from **b. Explanation:**
-      const explanationMatch = trimmed.match(/\*\*b\.\s*Explanation:\*\*\s*([^*]*?)(?=\*\*c\.|$)/i);
+      // Extract explanation from **2.X Explanation:**
+      const explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\s*([^*]*?)(?=\*\*2\.\d+\s+Example:|$)/i);
       const description = explanationMatch ? explanationMatch[1].trim() : '';
       
-      // Extract example from **c. Example:**
-      const exampleMatch = trimmed.match(/\*\*c\.\s*Example:\*\*\s*([^*]*?)(?=\*\*d\.|$)/i);
+      // Extract example from **2.X Example:**
+      const exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\s*([^*]*?)(?=\*\*2\.\d+\s+Better Plan:|$)/i);
       const exampleText = exampleMatch ? exampleMatch[1].trim() : '';
       
-      // Extract better plan from **d. Better Plan:**
-      const improvementMatch = trimmed.match(/\*\*d\.\s*Better Plan:\*\*\s*([^*]*?)(?=$)/i);
+      // Extract better plan from **2.X Better Plan:**
+      const improvementMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\s*([^*]*?)(?=\*\*2\.\d+\s+Title:|$)/i);
       const improvement = improvementMatch ? improvementMatch[1].trim() : '';
       
       // Parse the example for game details
