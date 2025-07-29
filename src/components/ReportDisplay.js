@@ -192,20 +192,25 @@ const ReportDisplay = ({ report, onBack }) => {
                 // Try multiple splitting patterns to handle different AI formats
                 let blocks = [];
                 
-                // Pattern 1: **2.1 Title:**, **2.2 Title:**, **2.3 Title:**
-                blocks = section.split(/(?=\*\*2\.\d+\s+Title:\s*[^*]+)/i).filter(block => block.trim().length > 50);
+                // Pattern 1: **2.1 [Title Text]** (current format)
+                blocks = section.split(/(?=\*\*2\.\d+\s+[^*]+\*\*)/i).filter(block => block.trim().length > 50);
                 
-                // Pattern 2: **2.1.**, **2.2.**, **2.3.** (with dots)
+                // Pattern 2: **2.1 Title:**, **2.2 Title:**, **2.3 Title:**
+                if (blocks.length <= 1) {
+                  blocks = section.split(/(?=\*\*2\.\d+\s+Title:\s*[^*]+)/i).filter(block => block.trim().length > 50);
+                }
+                
+                // Pattern 3: **2.1.**, **2.2.**, **2.3.** (with dots)
                 if (blocks.length <= 1) {
                   blocks = section.split(/(?=\*\*2\.\d+\.\s+[^*]+:\*\*)/i).filter(block => block.trim().length > 50);
                 }
                 
-                // Pattern 3: **1a.**, **2a.**, **3a.** (old format)
+                // Pattern 4: **1a.**, **2a.**, **3a.** (old format)
                 if (blocks.length <= 1) {
                   blocks = section.split(/(?=\*\*[123]a\.\s*\*\*(?:Title|Weakness))/i).filter(block => block.trim().length > 50);
                 }
                 
-                // Pattern 4: **a.** repeated (fallback)
+                // Pattern 5: **a.** repeated (fallback)
                 if (blocks.length <= 1) {
                   blocks = section.split(/(?=\*\*a\.\s*\*\*(?:Title|Weakness))/i).filter(block => block.trim().length > 50);
                 }
@@ -215,6 +220,7 @@ const ReportDisplay = ({ report, onBack }) => {
                   if (!trimmed) return;
                   
                   console.log(`Processing weakness block ${index + 1}:`, trimmed.substring(0, 200));
+                  console.log(`Full block ${index + 1}:`, trimmed);
                   
                   // Flexible title extraction - try multiple patterns
                   let title = `Weakness ${index + 1}`;
@@ -222,18 +228,37 @@ const ReportDisplay = ({ report, onBack }) => {
                   let exampleText = '';
                   let betterPlan = '';
                   
-                  // Pattern 1: **2.1 Title:** format
-                  let titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
+                  // Pattern 1: **2.1 [Title Text]** with **Explanation:**, **Example:**, **Better Plan:**
+                  let titleMatch = trimmed.match(/\*\*2\.\d+\s+([^*\n\r]+)\*\*/i);
+                  console.log(`Title match attempt 1 for block ${index + 1}:`, titleMatch);
                   if (titleMatch) {
                     title = titleMatch[1].trim();
-                    const explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\s*([^*]*?)(?=\*\*2\.\d+\s+Example:|$)/i);
+                    // Remove "Title: " prefix if present
+                    if (title.startsWith('Title: ')) {
+                      title = title.substring(7).trim();
+                    }
+                    console.log(`Extracted title: "${title}"`);
+                    const explanationMatch = trimmed.match(/\*\*Explanation:\*\*\s*([^*]*?)(?=\*\*Example:|$)/is);
                     description = explanationMatch ? explanationMatch[1].trim() : '';
-                    const exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\s*([^*]*?)(?=\*\*2\.\d+\s+Better Plan:|$)/i);
+                    const exampleMatch = trimmed.match(/\*\*Example:\*\*\s*([^*]*?)(?=\*\*Better Plan:|$)/is);
                     exampleText = exampleMatch ? exampleMatch[1].trim() : '';
-                    const betterPlanMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\s*([^*]*?)(?=\*\*2\.\d+\s+Title:|$)/i);
+                    const betterPlanMatch = trimmed.match(/\*\*Better Plan:\*\*\s*([^*]*?)(?=\*\*2\.\d+|$)/is);
                     betterPlan = betterPlanMatch ? betterPlanMatch[1].trim() : '';
                   }
-                  // Pattern 2: **2.1.** format with **a. Title:**
+                  // Pattern 2: **2.1 Title:** format
+                  else if (trimmed.match(/\*\*2\.\d+\s+Title:\s*/i)) {
+                    titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
+                    if (titleMatch) {
+                      title = titleMatch[1].trim();
+                      const explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\s*([^*]*?)(?=\*\*2\.\d+\s+Example:|$)/i);
+                      description = explanationMatch ? explanationMatch[1].trim() : '';
+                      const exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\s*([^*]*?)(?=\*\*2\.\d+\s+Better Plan:|$)/i);
+                      exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+                      const betterPlanMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\s*([^*]*?)(?=\*\*2\.\d+\s+Title:|$)/i);
+                      betterPlan = betterPlanMatch ? betterPlanMatch[1].trim() : '';
+                    }
+                  }
+                  // Pattern 3: **2.1.** format with **a. Title:**
                   else {
                     const mainTitleMatch = trimmed.match(/\*\*2\.\d+\.\s+([^*]+):\*\*/i);
                     const subtitleMatch = trimmed.match(/\*\*a\.\s*Title:\*\*\s*([^*]*?)(?=\*\*b\.|$)/i);

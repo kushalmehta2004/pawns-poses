@@ -388,8 +388,13 @@ const ReportGenerator = ({ onReportGenerated }) => {
     
     console.log('🔍 [EXTRACT WEAKNESSES] Found weakness section:', weaknessSection.substring(0, 500));
     
-    // Split by the new format: **2.1 Title:**, **2.2 Title:**, **2.3 Title:**
-    const weaknessBlocks = weaknessSection.split(/(?=\*\*2\.\d+\s+Title:\s*[^*]+)/i).filter(block => block.trim().length > 20);
+    // Split by the current format: **2.1 [Title Text]**
+    let weaknessBlocks = weaknessSection.split(/(?=\*\*2\.\d+\s+[^*]+\*\*)/i).filter(block => block.trim().length > 20);
+    
+    // Fallback: Split by **2.1 Title:** format
+    if (weaknessBlocks.length <= 1) {
+      weaknessBlocks = weaknessSection.split(/(?=\*\*2\.\d+\s+Title:\s*[^*]+)/i).filter(block => block.trim().length > 20);
+    }
     
     console.log('🔍 [EXTRACT WEAKNESSES] Found weakness blocks:', weaknessBlocks.length);
     
@@ -399,21 +404,38 @@ const ReportGenerator = ({ onReportGenerated }) => {
       
       console.log(`🔍 [EXTRACT WEAKNESSES] Processing block ${index + 1}:`, trimmed.substring(0, 200));
       
-      // Extract title from **2.1 Title:** pattern
-      const titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
-      const title = titleMatch ? titleMatch[1].trim() : `Weakness ${index + 1}`;
+      // Extract title - try current format first: **2.1 [Title Text]**
+      let titleMatch = trimmed.match(/\*\*2\.\d+\s+([^*\n\r]+)\*\*/i);
+      let title = titleMatch ? titleMatch[1].trim() : `Weakness ${index + 1}`;
+      let description = '';
+      let exampleText = '';
+      let improvement = '';
       
-      // Extract explanation from **2.X Explanation:**
-      const explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\s*([^*]*?)(?=\*\*2\.\d+\s+Example:|$)/i);
-      const description = explanationMatch ? explanationMatch[1].trim() : '';
-      
-      // Extract example from **2.X Example:**
-      const exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\s*([^*]*?)(?=\*\*2\.\d+\s+Better Plan:|$)/i);
-      const exampleText = exampleMatch ? exampleMatch[1].trim() : '';
-      
-      // Extract better plan from **2.X Better Plan:**
-      const improvementMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\s*([^*]*?)(?=\*\*2\.\d+\s+Title:|$)/i);
-      const improvement = improvementMatch ? improvementMatch[1].trim() : '';
+      if (titleMatch) {
+        // Remove "Title: " prefix if present
+        if (title.startsWith('Title: ')) {
+          title = title.substring(7).trim();
+        }
+        
+        // Current format: **2.1 [Title]** with **Explanation:**, **Example:**, **Better Plan:**
+        const explanationMatch = trimmed.match(/\*\*Explanation:\*\*\s*([^*]*?)(?=\*\*Example:|$)/is);
+        description = explanationMatch ? explanationMatch[1].trim() : '';
+        const exampleMatch = trimmed.match(/\*\*Example:\*\*\s*([^*]*?)(?=\*\*Better Plan:|$)/is);
+        exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+        const improvementMatch = trimmed.match(/\*\*Better Plan:\*\*\s*([^*]*?)(?=\*\*2\.\d+|$)/is);
+        improvement = improvementMatch ? improvementMatch[1].trim() : '';
+      } else {
+        // Fallback: **2.1 Title:** format
+        titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
+        title = titleMatch ? titleMatch[1].trim() : `Weakness ${index + 1}`;
+        
+        const explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\s*([^*]*?)(?=\*\*2\.\d+\s+Example:|$)/i);
+        description = explanationMatch ? explanationMatch[1].trim() : '';
+        const exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\s*([^*]*?)(?=\*\*2\.\d+\s+Better Plan:|$)/i);
+        exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+        const improvementMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\s*([^*]*?)(?=\*\*2\.\d+\s+Title:|$)/i);
+        improvement = improvementMatch ? improvementMatch[1].trim() : '';
+      }
       
       // Parse the example for game details
       const examples = [];
