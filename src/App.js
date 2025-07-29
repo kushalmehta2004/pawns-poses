@@ -7,8 +7,12 @@ import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import About from './pages/About';
 import Gallery from './pages/Gallery';
+import Reports from './pages/Reports';
 import Contact from './pages/Contact';
 import './App.css';
+
+// Import simple analysis functions for console access (development only)
+import './utils/simpleAnalysis.js';
 
 function App() {
   return (
@@ -21,6 +25,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/gallery" element={<Gallery />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
