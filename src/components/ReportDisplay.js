@@ -189,66 +189,81 @@ const ReportDisplay = ({ report, onBack }) => {
                 
                 const weaknesses = [];
                 
-                // Parse the **a.**, **b.**, **c.** format specifically
-                const weaknessSections = section.split(/(?=\*\*[a-c]\.\s+[^*]+:\*\*)/i);
+                // Split by the new format: **2.1.**, **2.2.**, **2.3.**
+                const blocks = section.split(/(?=\*\*2\.\d+\.\s+[^*]+:\*\*)/i).filter(block => block.trim().length > 50);
                 
-                for (const weaknessSection of weaknessSections) {
-                  const trimmed = weaknessSection.trim();
-                  if (!trimmed || trimmed.length < 50) continue;
+                blocks.forEach((block, index) => {
+                  const trimmed = block.trim();
+                  if (!trimmed) return;
                   
-                  // Extract the weakness letter and title
-                  const headerMatch = trimmed.match(/^\*\*([a-c])\.\s+([^*]+):\*\*([\s\S]*)/i);
-                  if (!headerMatch) continue;
+                  console.log(`Processing weakness block ${index + 1}:`, trimmed.substring(0, 200));
                   
-                  const letter = headerMatch[1].toLowerCase();
-                  const title = headerMatch[2].trim();
-                  const content = headerMatch[3].trim();
+                  // Extract main title from **2.1. Title:** pattern
+                  const mainTitleMatch = trimmed.match(/\*\*2\.\d+\.\s+([^*]+):\*\*/i);
+                  let mainTitle = mainTitleMatch ? mainTitleMatch[1].trim() : `Weakness ${index + 1}`;
                   
-                  // Look for the example within the content - it starts with "Game" or contains move notation
-                  let description = '';
-                  let example = '';
+                  // Extract subtitle from **a. Title:** pattern
+                  const subtitleMatch = trimmed.match(/\*\*a\.\s*Title:\*\*\s*([^*]*?)(?=\*\*b\.|$)/i);
+                  const subtitle = subtitleMatch ? subtitleMatch[1].trim() : '';
                   
-                  // Try to find where the example starts
-                  const gameMatch = content.match(/^(.*?)(\*\*Example:\*\*\s*Game.*|Game \d+, Move \d+:.*)/s);
-                  if (gameMatch) {
-                    description = gameMatch[1].trim();
-                    example = gameMatch[2].replace(/^\*\*Example:\*\*\s*/, '').trim();
-                  } else {
-                    // If no clear game reference, look for move patterns
-                    const moveMatch = content.match(/^(.*?)(`\d+\..*?`.*)/s);
-                    if (moveMatch) {
-                      description = moveMatch[1].trim();
-                      example = moveMatch[2].trim();
+                  // Use subtitle as the main title if it exists, otherwise use main title
+                  const title = subtitle || mainTitle;
+                  
+                  // Extract explanation from **b. Explanation:**
+                  const explanationMatch = trimmed.match(/\*\*b\.\s*Explanation:\*\*\s*([^*]*?)(?=\*\*c\.|$)/i);
+                  const description = explanationMatch ? explanationMatch[1].trim() : '';
+                  
+                  // Extract example from **c. Example:**
+                  const exampleMatch = trimmed.match(/\*\*c\.\s*Example:\*\*\s*([^*]*?)(?=\*\*d\.|$)/i);
+                  const exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+                  
+                  // Extract better plan from **d. Better Plan:**
+                  const betterPlanMatch = trimmed.match(/\*\*d\.\s*Better Plan:\*\*\s*([^*]*?)(?=$)/i);
+                  const betterPlan = betterPlanMatch ? betterPlanMatch[1].trim() : '';
+                  
+                  // Parse the example for game details
+                  let formattedExample = '';
+                  if (exampleText) {
+                    // Look for Game [X], Move [Y]: `move` - description pattern
+                    const gameMatch = exampleText.match(/Game\s*(\d+),\s*Move\s*(\d+):\s*`([^`]+)`\s*-\s*(.*)/is);
+                    if (gameMatch) {
+                      const gameNum = gameMatch[1];
+                      const moveNum = gameMatch[2];
+                      const move = gameMatch[3].trim();
+                      const desc = gameMatch[4].trim();
+                      
+                      formattedExample = `<p class="text-xs text-gray-500 mb-2">vs. opponent${gameNum} (Move ${moveNum})</p>` +
+                                       `<p class="text-sm text-gray-700"><strong>Mistake:</strong> After <code class="move-code">${move}</code>, ${desc}</p>`;
                     } else {
-                      // No clear example found, treat all as description
-                      description = content;
-                      example = '';
+                      // Fallback formatting - clean up the text
+                      const cleanExample = exampleText
+                        .replace(/Game\s*(\d+),\s*Move\s*(\d+):\s*`([^`]+)`/g, '<p class="text-xs text-gray-500 mb-2">vs. opponent$1 (Move $2)</p><p class="text-sm text-gray-700"><strong>Move:</strong> <code class="move-code">$3</code></p>')
+                        .replace(/\n\s*\n/g, '</p><p class="text-sm text-gray-700 mt-2">')
+                        .replace(/\n/g, ' ');
+                      
+                      formattedExample = `<p class="text-sm text-gray-700">${cleanExample}</p>`;
+                    }
+                    
+                    // Add better plan to the example if it exists
+                    if (betterPlan) {
+                      formattedExample += `<p class="text-sm text-gray-700 mt-2"><strong>Better Plan:</strong> ${betterPlan}</p>`;
                     }
                   }
                   
-                  // Create weakness object
                   const weakness = {
-                    number: weaknesses.length + 1,
+                    number: index + 1,
                     title: title,
-                    description: description || 'No description available',
-                    example: example
+                    description: description,
+                    example: formattedExample,
+                    betterPlan: betterPlan,
+                    rawContent: trimmed
                   };
                   
-                  // Clean up description - remove any remaining markdown
-                  weakness.description = weakness.description
-                    .replace(/\*\*[^*]*\*\*/g, '')
-                    .replace(/^\s*[-*•]\s*/, '')
-                    .trim();
-                  
-                  // Clean up example
-                  weakness.example = weakness.example
-                    .replace(/\*\*[^*]*\*\*/g, '')
-                    .trim();
-                  
+                  console.log(`Parsed weakness ${index + 1}:`, weakness);
                   weaknesses.push(weakness);
-                }
+                });
                 
-                return weaknesses.filter(w => w.title && w.title.length > 3);
+                return weaknesses.slice(0, 3); // Ensure max 3 weaknesses
               };
               
               const weaknessSection = extractWeaknessSection(fullText);
@@ -279,13 +294,6 @@ const ReportDisplay = ({ report, onBack }) => {
                             className="text-sm text-gray-700"
                             dangerouslySetInnerHTML={{
                               __html: weakness.example
-                                .replace(/Game (\d+), Move (\d+):/g, '<p class="text-xs text-gray-500">vs. opponent (Move $2)</p>')
-                                .replace(/vs\.\s+([^\s]+)\s+\(Move\s+(\d+)\)/g, '<p class="text-xs text-gray-500">vs. $1 (Move $2)</p>')
-                                .replace(/`([^`]+)`/g, '<code class="move-code">$1</code>')
-                                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                                .replace(/Better:\s*([^.]+)/gi, '<br><strong>Better Plan:</strong> $1')
-                                .replace(/Superior Plan:\s*([^.]+)/gi, '<br><strong>Better Plan:</strong> $1')
-                                .replace(/\n/g, '<br>')
                             }}
                           />
                         </div>

@@ -362,75 +362,97 @@ const ReportGenerator = ({ onReportGenerated }) => {
 
   const extractWeaknesses = (text) => {
     console.log('🔍 [EXTRACT WEAKNESSES] Starting weakness extraction...');
-    console.log('🔍 [EXTRACT WEAKNESSES] Full text:', text);
     
     const weaknesses = [];
     
-    // Find the "Recurring Weaknesses:" section
-    const weaknessesSection = text.match(/1\.\s*\*\*Recurring Weaknesses:\*\*([\s\S]*?)(?=2\.\s*\*\*|$)/i);
-    const examplesSection = text.match(/2\.\s*\*\*Recurring Weaknesses Examples:\*\*([\s\S]*?)(?=3\.\s*\*\*|$)/i);
+    // Find the "Recurring Weaknesses" section - try multiple patterns
+    const patterns = [
+      /2\.\s*\*\*Recurring Weaknesses.*?\*\*([\s\S]*?)(?=3\.\s*\*\*|$)/i,
+      /\*\*Recurring Weaknesses.*?\*\*([\s\S]*?)(?=\*\*.*?Middlegame|$)/i,
+      /Recurring Weaknesses.*?:([\s\S]*?)(?=Middlegame|Endgame|Actionable|$)/i
+    ];
     
-    if (!weaknessesSection) {
+    let weaknessSection = null;
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        weaknessSection = match[1];
+        break;
+      }
+    }
+    
+    if (!weaknessSection) {
       console.log('🔍 [EXTRACT WEAKNESSES] No weaknesses section found');
       return weaknesses;
     }
     
-    const weaknessText = weaknessesSection[1];
-    const exampleText = examplesSection ? examplesSection[1] : '';
+    console.log('🔍 [EXTRACT WEAKNESSES] Found weakness section:', weaknessSection.substring(0, 500));
     
-    console.log('🔍 [EXTRACT WEAKNESSES] Weakness text:', weaknessText);
-    console.log('🔍 [EXTRACT WEAKNESSES] Example text:', exampleText);
+    // Split by the new format: **2.1.**, **2.2.**, **2.3.**
+    const weaknessBlocks = weaknessSection.split(/(?=\*\*2\.\d+\.\s+[^*]+:\*\*)/i).filter(block => block.trim().length > 20);
     
-    // Extract individual weaknesses: a. **Title:** Description
-    const weaknessMatches = weaknessText.match(/([abc])\.\s*\*\*([^*]+):\*\*\s*([^abc]*?)(?=[abc]\.\s*\*\*|$)/gi);
+    console.log('🔍 [EXTRACT WEAKNESSES] Found weakness blocks:', weaknessBlocks.length);
     
-    if (!weaknessMatches) {
-      console.log('🔍 [EXTRACT WEAKNESSES] No weakness matches found');
-      return weaknesses;
-    }
-    
-    console.log('🔍 [EXTRACT WEAKNESSES] Found matches:', weaknessMatches.length);
-    
-    weaknessMatches.forEach((match, index) => {
-    const parsed = match.match(/([abc])\.\s*\*\*([^*]+):\*\*\s*(.*)/i);
-      if (!parsed) return;
+    weaknessBlocks.forEach((block, index) => {
+      const trimmed = block.trim();
+      if (!trimmed) return;
       
-      const letter = parsed[1];
-        const title = parsed[2].trim();
-      const description = parsed[3].trim();
+      console.log(`🔍 [EXTRACT WEAKNESSES] Processing block ${index + 1}:`, trimmed.substring(0, 200));
       
-      // Find corresponding example
-      const examplePattern = new RegExp(`${letter}\\.\s*\\*\\*Game\\s+(\\d+),\\s+Move\\s+(\\d+):\\*\\*\\s*\`([^\`]+)\`\\s*-\\s*([^abc]*?)(?=[abc]\\.|$)`, 'i');
-      const exampleMatch = exampleText.match(examplePattern);
+      // Extract main title from **2.1. Title:** pattern
+      const mainTitleMatch = trimmed.match(/\*\*2\.\d+\.\s+([^*]+):\*\*/i);
+      let mainTitle = mainTitleMatch ? mainTitleMatch[1].trim() : `Weakness ${index + 1}`;
       
+      // Extract subtitle from **a. Title:** pattern
+      const subtitleMatch = trimmed.match(/\*\*a\.\s*Title:\*\*\s*([^*]*?)(?=\*\*b\.|$)/i);
+      const subtitle = subtitleMatch ? subtitleMatch[1].trim() : '';
+      
+      // Use subtitle as the main title if it exists, otherwise use main title
+      const title = subtitle || mainTitle;
+      
+      // Extract explanation from **b. Explanation:**
+      const explanationMatch = trimmed.match(/\*\*b\.\s*Explanation:\*\*\s*([^*]*?)(?=\*\*c\.|$)/i);
+      const description = explanationMatch ? explanationMatch[1].trim() : '';
+      
+      // Extract example from **c. Example:**
+      const exampleMatch = trimmed.match(/\*\*c\.\s*Example:\*\*\s*([^*]*?)(?=\*\*d\.|$)/i);
+      const exampleText = exampleMatch ? exampleMatch[1].trim() : '';
+      
+      // Extract better plan from **d. Better Plan:**
+      const improvementMatch = trimmed.match(/\*\*d\.\s*Better Plan:\*\*\s*([^*]*?)(?=$)/i);
+      const improvement = improvementMatch ? improvementMatch[1].trim() : '';
+      
+      // Parse the example for game details
       const examples = [];
-      if (exampleMatch) {
-        examples.push({
-          gameNumber: parseInt(exampleMatch[1]),
-          moveNumber: parseInt(exampleMatch[2]),
-          move: exampleMatch[3].trim(),
-          description: exampleMatch[4].trim(),
-          opponent: 'Opponent'
-        });
+      if (exampleText) {
+        // Look for Game X, Move Y: `move` - description pattern
+        const gameMatch = exampleText.match(/Game\s+(\d+),\s+Move\s+(\d+):\s*`([^`]+)`\s*-\s*(.*)/i);
+        if (gameMatch) {
+          examples.push({
+            gameNumber: parseInt(gameMatch[1]),
+            moveNumber: parseInt(gameMatch[2]),
+            move: gameMatch[3].trim(),
+            description: gameMatch[4].trim(),
+            opponent: `opponent${gameMatch[1]}` // Generate opponent name
+          });
+        }
       }
       
-      const weaknessNumber = letter === 'a' ? 1 : letter === 'b' ? 2 : 3;
-      
       const weakness = {
-        number: weaknessNumber,
+        number: index + 1,
         title: title,
         description: description,
         examples: examples,
-        improvement: extractImprovement(description + (exampleMatch ? exampleMatch[4] : '')),
-        rawContent: match
+        improvement: improvement,
+        rawContent: trimmed
       };
       
-      console.log(`🔍 [EXTRACT WEAKNESSES] Extracted weakness ${weaknessNumber}:`, weakness);
+      console.log(`🔍 [EXTRACT WEAKNESSES] Extracted weakness ${index + 1}:`, weakness);
       weaknesses.push(weakness);
     });
     
     console.log(`🔍 [EXTRACT WEAKNESSES] Total weaknesses found: ${weaknesses.length}`);
-    return weaknesses;
+    return weaknesses.slice(0, 3); // Ensure max 3 weaknesses
   };
 
   const extractExamples = (weaknessText, games = []) => {
