@@ -363,39 +363,31 @@ const ReportDisplay = ({ report, onBack }) => {
               return (
                 <div>
                   {weaknesses.map((weakness, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                      <h3 className="font-bold text-gray-800">
+                    <div key={index} className="mb-6">
+                      {/* Weakness Title */}
+                      <h3 className="font-bold text-gray-800 text-lg mb-4">
                         {weakness.number}. {weakness.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {weakness.description}
-                      </p>
                       
-                      {(weakness.example || weakness.betterPlan) && (
-                        <div className="mt-4 bg-white p-4 rounded-lg border border-gray-300 shadow-sm">
-                          <h4 className="font-semibold text-gray-700 mb-3 flex items-center">
-                            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                            Example & Improvement
+                      {/* Description Box */}
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                        <p className="text-sm text-gray-700">
+                      {weakness.description}
+                        </p>
+                          </div>
+                      
+                      {/* Example Box */}
+                      {weakness.example && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <h4 className="font-semibold text-blue-800 mb-3">
+                            Example from Your Game
                           </h4>
-                          
-                          {weakness.example && (
-                            <div className="mb-3">
-                              <div 
-                                className="text-sm text-gray-700"
-                                dangerouslySetInnerHTML={{
-                                  __html: weakness.example
-                                }}
-                              />
-                            </div>
-                          )}
-                          
-                          {weakness.betterPlan && !weakness.example.includes('Better Plan:') && (
-                            <div className="mt-3 p-3 bg-green-50 border-l-4 border-green-400 rounded">
-                              <p className="text-sm text-gray-700">
-                                <strong className="text-green-700">Better Plan:</strong> {weakness.betterPlan}
-                              </p>
-                            </div>
-                          )}
+                          <div 
+                            className="text-sm text-gray-700"
+                            dangerouslySetInnerHTML={{
+                              __html: weakness.example
+                            }}
+                          />
                         </div>
                       )}
                     </div>
