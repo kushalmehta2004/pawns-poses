@@ -418,12 +418,35 @@ const ReportGenerator = ({ onReportGenerated }) => {
         }
         
         // Current format: **2.1 [Title]** with **Explanation:**, **Example:**, **Better Plan:**
-        const explanationMatch = trimmed.match(/\*\*Explanation:\*\*\s*([^*]*?)(?=\*\*Example:|$)/is);
+        // Try multiple explanation patterns
+        let explanationMatch = trimmed.match(/\*\*Explanation:\*\*\s*([^*]*?)(?=\*\*Example:|$)/is);
+        if (!explanationMatch) {
+          explanationMatch = trimmed.match(/\*\*2\.\d+\s+Explanation:\*\*\s*([^*]*?)(?=\*\*Example:|$)/is);
+        }
         description = explanationMatch ? explanationMatch[1].trim() : '';
-        const exampleMatch = trimmed.match(/\*\*Example:\*\*\s*([^*]*?)(?=\*\*Better Plan:|$)/is);
+        
+        // Try multiple example patterns
+        let exampleMatch = trimmed.match(/\*\*Example:\*\*\s*([^*]*?)(?=\*\*Better Plan:|$)/is);
+        if (!exampleMatch) {
+          exampleMatch = trimmed.match(/\*\*2\.\d+\s+Example:\*\*\s*([^*]*?)(?=\*\*Better Plan:|$)/is);
+        }
         exampleText = exampleMatch ? exampleMatch[1].trim() : '';
-        const improvementMatch = trimmed.match(/\*\*Better Plan:\*\*\s*([^*]*?)(?=\*\*2\.\d+|$)/is);
+        
+        // Try multiple better plan patterns
+        let improvementMatch = trimmed.match(/\*\*Better Plan:\*\*\s*([^*]*?)(?=\*\*2\.\d+|$)/is);
+        if (!improvementMatch) {
+          improvementMatch = trimmed.match(/\*\*2\.\d+\s+Better Plan:\*\*\s*([^*]*?)(?=\*\*2\.\d+|$)/is);
+        }
         improvement = improvementMatch ? improvementMatch[1].trim() : '';
+        
+        // If still no content, try extracting everything after the title
+        if (!description && !exampleText && !improvement) {
+          const afterTitle = trimmed.substring(trimmed.indexOf('**') + titleMatch[0].length);
+          const rawContentMatch = afterTitle.match(/^\s*([^*]*?)(?=\*\*|$)/s);
+          if (rawContentMatch && rawContentMatch[1].trim().length > 20) {
+            description = rawContentMatch[1].trim();
+          }
+        }
       } else {
         // Fallback: **2.1 Title:** format
         titleMatch = trimmed.match(/\*\*2\.\d+\s+Title:\s*([^*]*?)(?=\*\*2\.\d+\s+Explanation:|$)/i);
