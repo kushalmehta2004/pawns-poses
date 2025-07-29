@@ -13,7 +13,7 @@ Analyze the games of the user '[Username]'. The games are provided above with FE
         CRITICAL: The example MUST show the actual move played in chess notation (like 15...g5? or 22.Bxf6?) and focus on POSITIONAL/STRATEGIC mistakes, not tactical blunders. This should be a move that seems reasonable but has long-term positional consequences. Use the FEN positions provided to analyze the exact board state before and after each move. 
     d. **Better Plan:** Suggest the superior plan and explain the future idea or plan like for example we have to exchange the bisop later onto make sure the dark squares will be weak permamently and we will take easy win
     
-    keep the numbering of the weakness systematic so while parsing it doesnt face any difficulty
+    keep the numbering of the weakness systematic so while parsing it doesnt face any difficulty for example first weakness has numbering 2.1 and then a b c d subparts similarly 2.2 for second weakness and then ab c d and finally 2.3 with subparts a b c d
     
     
 3.  **Middlegame Mastery Focus:**
